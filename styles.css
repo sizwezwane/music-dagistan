@@ -1,0 +1,113 @@
+:root {
+  --bg: #0f1117;
+  --panel: #161a23;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --accent: #60a5fa;
+  --accent-2: #34d399;
+  --danger: #fb7185;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+.app-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #1f2430;
+}
+
+.app-header h1 {
+  margin: 0 0 4px 0;
+  font-size: 20px;
+}
+
+.subtitle { color: var(--muted); margin: 0; }
+
+.controls {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  padding: 12px 20px;
+  background: var(--panel);
+  border-bottom: 1px solid #1f2430;
+}
+
+.control-group { display: flex; align-items: center; gap: 8px; }
+.control-group.row > div { display: flex; flex-direction: column; gap: 4px; }
+
+label { color: var(--muted); font-size: 12px; }
+
+input, select, button {
+  background: #0e131b;
+  border: 1px solid #263042;
+  color: var(--text);
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+
+button { cursor: pointer; }
+button:hover { border-color: var(--accent); }
+
+.graph-container {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  height: calc(100vh - 160px);
+}
+
+#graph { width: 100%; height: 100%; }
+
+.sidebar {
+  border-left: 1px solid #1f2430;
+  padding: 12px;
+  background: #0e131b;
+  overflow: auto;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid #263042;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.app-footer {
+  padding: 10px 20px;
+  border-top: 1px solid #1f2430;
+  color: var(--muted);
+}
+
+.node-label {
+  fill: #cbd5e1;
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.edge {
+  stroke: #334155;
+  stroke-opacity: 0.5;
+}
+
+.edge.path-highlight { stroke: var(--accent-2); stroke-width: 3px; stroke-opacity: 0.95; }
+.node.path-highlight circle { stroke: var(--accent-2); stroke-width: 3px; }
+
+.node.highlight circle { stroke: var(--accent); stroke-width: 3px; }
+.node.dim circle { opacity: 0.2; }
+.edge.dim { opacity: 0.1; }
+
+.legend { display: flex; gap: 8px; align-items: center; color: var(--muted); font-size: 12px; }
+
+

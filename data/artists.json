@@ -1,0 +1,30 @@
+{
+  "nodes": [
+    { "id": "tswift", "name": "Taylor Swift" },
+    { "id": "edsheeran", "name": "Ed Sheeran" },
+    { "id": "imagine", "name": "Imagine Dragons" },
+    { "id": "billie", "name": "Billie Eilish" },
+    { "id": "finneas", "name": "FINNEAS" },
+    { "id": "drake", "name": "Drake" },
+    { "id": "rihanna", "name": "Rihanna" },
+    { "id": "beyonce", "name": "Beyoncé" },
+    { "id": "jayz", "name": "JAY-Z" },
+    { "id": "kendrick", "name": "Kendrick Lamar" },
+    { "id": "sza", "name": "SZA" },
+    { "id": "weeknd", "name": "The Weeknd" }
+  ],
+  "edges": [
+    { "source": "tswift", "target": "edsheeran", "relation": "collab" },
+    { "source": "billie", "target": "finneas", "relation": "sibling/collab" },
+    { "source": "drake", "target": "rihanna", "relation": "collab" },
+    { "source": "beyonce", "target": "jayz", "relation": "collab" },
+    { "source": "kendrick", "target": "sza", "relation": "collab" },
+    { "source": "weeknd", "target": "kendrick", "relation": "collab" },
+    { "source": "weeknd", "target": "sza", "relation": "collab" },
+    { "source": "rihanna", "target": "kendrick", "relation": "collab" },
+    { "source": "imagine", "target": "edsheeran", "relation": "tour/label" },
+    { "source": "tswift", "target": "imagine", "relation": "festival" }
+  ]
+}
+
+

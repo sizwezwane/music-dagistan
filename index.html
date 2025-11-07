@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Music Dagistan — Artist Relationship Graph</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <h1>Music Dagistan</h1>
+      <p class="subtitle">Explore artist relationships using graph theory</p>
+    </header>
+
+    <section class="controls">
+      <div class="control-group">
+        <label for="searchInput">Search artist</label>
+        <input id="searchInput" type="text" placeholder="Type an artist name..." />
+        <button id="clearSearchBtn" type="button">Clear</button>
+      </div>
+
+      <div class="control-group row">
+        <div>
+          <label for="sourceInput">Shortest path: Source</label>
+          <input id="sourceInput" type="text" placeholder="e.g., Artist A" />
+        </div>
+        <div>
+          <label for="targetInput">Shortest path: Target</label>
+          <input id="targetInput" type="text" placeholder="e.g., Artist B" />
+        </div>
+        <button id="shortestPathBtn" type="button">Find Path</button>
+        <button id="clearPathBtn" type="button">Clear Path</button>
+      </div>
+
+      <div class="control-group row">
+        <label for="communitySelect">Communities</label>
+        <select id="communitySelect">
+          <option value="all">All</option>
+        </select>
+        <button id="reheatBtn" type="button">Reheat Layout</button>
+      </div>
+    </section>
+
+    <main class="graph-container">
+      <svg id="graph" role="img" aria-label="Artist relationship graph"></svg>
+      <aside class="sidebar" id="sidebar">
+        <h2>Details</h2>
+        <div id="details"></div>
+      </aside>
+    </main>
+
+    <footer class="app-footer">
+      <span>Node size = degree centrality. Edge = relationship (collab, influence, label, etc.).</span>
+    </footer>
+
+    <script type="module" src="dist/app.js"></script>
+  </body>
+  </html>
+
+
