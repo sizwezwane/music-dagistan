@@ -1,0 +1,137 @@
+{
+  "songs": [
+    {
+      "id": "song-everything-has-changed",
+      "title": "Everything Has Changed",
+      "artistIds": ["tswift", "edsheeran"],
+      "year": 2012,
+      "credits": {
+        "writers": ["tswift", "edsheeran"],
+        "producers": ["tswift", "edsheeran"],
+        "performers": ["tswift", "edsheeran"]
+      }
+    },
+    {
+      "id": "song-end-game",
+      "title": "End Game",
+      "artistIds": ["tswift", "edsheeran"],
+      "year": 2017,
+      "credits": {
+        "writers": ["tswift", "edsheeran"],
+        "producers": ["tswift", "edsheeran"],
+        "performers": ["tswift", "edsheeran"]
+      }
+    },
+    {
+      "id": "song-bad-guy",
+      "title": "Bad Guy",
+      "artistIds": ["billie", "finneas"],
+      "year": 2019,
+      "credits": {
+        "writers": ["billie", "finneas"],
+        "producers": ["finneas"],
+        "performers": ["billie"]
+      }
+    },
+    {
+      "id": "song-ocean-eyes",
+      "title": "Ocean Eyes",
+      "artistIds": ["billie", "finneas"],
+      "year": 2015,
+      "credits": {
+        "writers": ["finneas"],
+        "producers": ["finneas"],
+        "performers": ["billie"]
+      }
+    },
+    {
+      "id": "song-work",
+      "title": "Work",
+      "artistIds": ["rihanna", "drake"],
+      "year": 2016,
+      "credits": {
+        "writers": ["rihanna", "drake"],
+        "producers": ["drake"],
+        "performers": ["rihanna", "drake"]
+      }
+    },
+    {
+      "id": "song-take-care",
+      "title": "Take Care",
+      "artistIds": ["drake", "rihanna"],
+      "year": 2011,
+      "credits": {
+        "writers": ["drake", "rihanna"],
+        "producers": ["drake"],
+        "performers": ["drake", "rihanna"]
+      }
+    },
+    {
+      "id": "song-crazy-in-love",
+      "title": "Crazy in Love",
+      "artistIds": ["beyonce", "jayz"],
+      "year": 2003,
+      "credits": {
+        "writers": ["beyonce", "jayz"],
+        "producers": ["beyonce"],
+        "performers": ["beyonce", "jayz"]
+      }
+    },
+    {
+      "id": "song-deja-vu",
+      "title": "Déjà Vu",
+      "artistIds": ["beyonce", "jayz"],
+      "year": 2006,
+      "credits": {
+        "writers": ["beyonce", "jayz"],
+        "producers": ["beyonce"],
+        "performers": ["beyonce", "jayz"]
+      }
+    },
+    {
+      "id": "song-all-the-stars",
+      "title": "All the Stars",
+      "artistIds": ["kendrick", "sza"],
+      "year": 2018,
+      "credits": {
+        "writers": ["kendrick", "sza"],
+        "producers": ["kendrick"],
+        "performers": ["kendrick", "sza"]
+      }
+    },
+    {
+      "id": "song-pray-for-me",
+      "title": "Pray for Me",
+      "artistIds": ["weeknd", "kendrick"],
+      "year": 2018,
+      "credits": {
+        "writers": ["weeknd", "kendrick"],
+        "producers": ["weeknd"],
+        "performers": ["weeknd", "kendrick"]
+      }
+    },
+    {
+      "id": "song-power-is-power",
+      "title": "Power Is Power",
+      "artistIds": ["weeknd", "sza"],
+      "year": 2019,
+      "credits": {
+        "writers": ["weeknd", "sza"],
+        "producers": ["weeknd"],
+        "performers": ["weeknd", "sza"]
+      }
+    },
+    {
+      "id": "song-loyalty",
+      "title": "LOYALTY.",
+      "artistIds": ["kendrick", "rihanna"],
+      "year": 2017,
+      "credits": {
+        "writers": ["kendrick", "rihanna"],
+        "producers": ["kendrick"],
+        "performers": ["kendrick", "rihanna"]
+      }
+    }
+  ]
+}
+

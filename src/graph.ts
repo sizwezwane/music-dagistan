@@ -1,6 +1,7 @@
 export type ArtistNode = {
   id: string;
   name: string;
+  nodeType?: 'artist' | 'song';
   communityId?: string;
   // Additional metadata welcome, but kept open-ended
   [key: string]: unknown;
@@ -151,10 +152,103 @@ export async function loadGraphFromJson(url: string): Promise<Graph> {
   const res = await fetch(url);
   const data = (await res.json()) as GraphData;
   const graph = new Graph();
-  for (const n of data.nodes) graph.addNode(n);
+  for (const n of data.nodes) {
+    graph.addNode({ ...n, nodeType: 'artist' });
+  }
   for (const e of data.edges) graph.addEdge(e.source, e.target, e.weight ?? 1, e);
   graph.assignCommunities();
   return graph;
+}
+
+export type SongCredit = {
+  id: string;
+  title: string;
+  artistIds: string[];
+  year?: number;
+  credits: {
+    writers?: string[];
+    producers?: string[];
+    performers?: string[];
+    [key: string]: string[] | undefined;
+  };
+};
+
+export type SongCreditsData = {
+  songs: SongCredit[];
+};
+
+export async function loadSongCredits(url: string): Promise<SongCreditsData> {
+  const res = await fetch(url);
+  return (await res.json()) as SongCreditsData;
+}
+
+export function addSongCreditsToGraph(graph: Graph, songCredits: SongCreditsData): void {
+  // Add song nodes and create edges to artists
+  for (const song of songCredits.songs) {
+    // Add song node
+    graph.addNode({
+      id: song.id,
+      name: song.title,
+      nodeType: 'song',
+      year: song.year,
+      credits: song.credits,
+    });
+
+    // Create edges from song to all credited artists
+    const allCreditedArtists = new Set<string>();
+    
+    // Add all artist IDs from the song
+    for (const artistId of song.artistIds) {
+      allCreditedArtists.add(artistId);
+    }
+
+    // Add all artists from credits (writers, producers, performers)
+    if (song.credits.writers) {
+      for (const writerId of song.credits.writers) {
+        allCreditedArtists.add(writerId);
+      }
+    }
+    if (song.credits.producers) {
+      for (const producerId of song.credits.producers) {
+        allCreditedArtists.add(producerId);
+      }
+    }
+    if (song.credits.performers) {
+      for (const performerId of song.credits.performers) {
+        allCreditedArtists.add(performerId);
+      }
+    }
+
+    // Create edges from song to each credited artist
+    // If artist doesn't exist, create a basic artist node
+    for (const artistId of allCreditedArtists) {
+      if (!graph.nodeData.has(artistId)) {
+        // Create a basic artist node if it doesn't exist
+        graph.addNode({
+          id: artistId,
+          name: artistId,
+          nodeType: 'artist',
+        });
+      }
+      
+      // Determine relation type based on credit role
+      let relation = 'credited';
+      if (song.artistIds.includes(artistId)) {
+        relation = 'performs';
+      } else if (song.credits.writers?.includes(artistId)) {
+        relation = 'writes';
+      } else if (song.credits.producers?.includes(artistId)) {
+        relation = 'produces';
+      } else if (song.credits.performers?.includes(artistId)) {
+        relation = 'performs';
+      }
+      
+      graph.addEdge(song.id, artistId, 1, { relation, songId: song.id, artistId });
+    }
+  }
+
+  // Reassign communities after adding songs
+  graph.assignCommunities();
 }
 
 

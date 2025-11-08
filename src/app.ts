@@ -1,9 +1,10 @@
-import { Graph, loadGraphFromJson } from './graph.js';
+import { Graph, loadGraphFromJson, loadSongCredits, addSongCreditsToGraph } from './graph.js';
 import * as d3 from 'd3';
 
 type NodeDatum = {
   id: string;
   name: string;
+  nodeType?: 'artist' | 'song';
   communityId: string;
   degree: number;
   centrality: number;
@@ -63,6 +64,7 @@ function render(graph: Graph): void {
     return {
       id,
       name: info.name ?? id,
+      nodeType: (info.nodeType as 'artist' | 'song' | undefined) ?? 'artist',
       communityId: info.communityId ?? 'C0',
       degree: graph.degree(id),
       centrality: centrality.get(id) ?? 0,
@@ -78,16 +80,58 @@ function render(graph: Graph): void {
   const node = g
     .selectAll<SVGGElement, NodeDatum>('g.node')
     .data(nodeData, (d: any) => d.id)
-    .join((enter) => {
-      const group = enter.append('g').attr('class', 'node');
-      group
-        .append('circle')
-        .attr('r', (d) => 6 + Math.max(2, d.degree))
-        .attr('fill', (d) => colorForCommunity(d.communityId))
-        .attr('stroke', '#0b0f17');
-      group.append('title').text((d) => `${d.name}\nDegree: ${d.degree}`);
-      return group;
-    });
+    .join(
+      (enter) => {
+        const group = enter.append('g').attr('class', 'node');
+        
+        // Add shape based on node type
+        group.each(function(d) {
+          const el = d3.select(this);
+          if (d.nodeType === 'song') {
+            // Song nodes: use rectangles
+            el.append('rect')
+              .attr('class', 'song-shape')
+              .attr('width', (d) => (6 + Math.max(2, d.degree)) * 2)
+              .attr('height', (d) => (6 + Math.max(2, d.degree)) * 2)
+              .attr('x', (d) => -(6 + Math.max(2, d.degree)))
+              .attr('y', (d) => -(6 + Math.max(2, d.degree)))
+              .attr('rx', 3)
+              .attr('fill', '#fbbf24')
+              .attr('stroke', '#0b0f17')
+              .attr('stroke-width', 2);
+          } else {
+            // Artist nodes: use circles
+            el.append('circle')
+              .attr('class', 'artist-shape')
+              .attr('r', (d) => 6 + Math.max(2, d.degree))
+              .attr('fill', (d) => colorForCommunity(d.communityId))
+              .attr('stroke', '#0b0f17');
+          }
+        });
+        
+        group.append('title').text((d) => {
+          const type = d.nodeType === 'song' ? 'Song' : 'Artist';
+          return `${type}: ${d.name}\nDegree: ${d.degree}`;
+        });
+        return group;
+      },
+      (update) => {
+        // Update existing nodes
+        update.select('circle.artist-shape')
+          .attr('r', (d) => 6 + Math.max(2, d.degree))
+          .attr('fill', (d) => d.nodeType === 'song' ? '#fbbf24' : colorForCommunity(d.communityId));
+        update.select('rect.song-shape')
+          .attr('width', (d) => (6 + Math.max(2, d.degree)) * 2)
+          .attr('height', (d) => (6 + Math.max(2, d.degree)) * 2)
+          .attr('x', (d) => -(6 + Math.max(2, d.degree)))
+          .attr('y', (d) => -(6 + Math.max(2, d.degree)));
+        update.select('title').text((d) => {
+          const type = d.nodeType === 'song' ? 'Song' : 'Artist';
+          return `${type}: ${d.name}\nDegree: ${d.degree}`;
+        });
+        return update;
+      }
+    );
 
   const labels = g
     .selectAll<SVGTextElement, NodeDatum>('text.node-label')
@@ -129,7 +173,11 @@ function render(graph: Graph): void {
     .force('link', d3.forceLink<NodeDatum, d3.SimulationLinkDatum<NodeDatum>>(linkData).id((d) => d.id).distance(50).strength(0.3))
     .force('charge', d3.forceManyBody().strength(-100))
     .force('center', d3.forceCenter(0, 0))
-    .force('collide', d3.forceCollide<NodeDatum>().radius((d) => 10 + Math.max(2, d.degree)))
+    .force('collide', d3.forceCollide<NodeDatum>().radius((d) => {
+      // Adjust collision radius based on node type
+      const baseRadius = 6 + Math.max(2, d.degree);
+      return d.nodeType === 'song' ? baseRadius * 1.5 : baseRadius + 4;
+    }))
     .on('tick', () => {
       link
         .attr('x1', (d) => (d.source as NodeDatum).x!)
@@ -138,7 +186,11 @@ function render(graph: Graph): void {
         .attr('y2', (d) => (d.target as NodeDatum).y!);
 
       node.attr('transform', (d) => `translate(${d.x},${d.y})`);
-      labels.attr('x', (d) => d.x!).attr('y', (d) => d.y! - 12);
+      labels.attr('x', (d) => d.x!).attr('y', (d) => {
+        // Adjust label position based on node type
+        const offset = d.nodeType === 'song' ? -15 : -12;
+        return d.y! + offset;
+      });
     });
 
   const fit = () => {
@@ -197,21 +249,63 @@ function showDetails(id: string): void {
   const data = state.graph.nodeData.get(id) || { id, name: id };
   const deg = state.graph.degree(id);
   const nbrs = state.graph.neighbors(id);
-  el.innerHTML = `
+  const nodeType = (data as any).nodeType ?? 'artist';
+  
+  let detailsHTML = `
     <div>
       <div style="display:flex;align-items:center;gap:8px;">
         <strong style="font-size:16px;">${(data as any).name}</strong>
+        <span class="badge">${nodeType === 'song' ? '🎵 Song' : '👤 Artist'}</span>
         <span class="badge">${(data as any).communityId ?? 'C?'}</span>
       </div>
       <div class="legend" style="margin:8px 0 6px;">
         <span>Degree: <strong>${deg}</strong></span>
       </div>
+  `;
+  
+  // Show song-specific information
+  if (nodeType === 'song') {
+    const year = (data as any).year;
+    const credits = (data as any).credits;
+    if (year) {
+      detailsHTML += `<div style="margin:4px 0;color:#94a3b8;">Year: <strong>${year}</strong></div>`;
+    }
+    if (credits) {
+      if (credits.writers && credits.writers.length > 0) {
+        detailsHTML += `<div style="margin:4px 0;"><span style="color:#94a3b8;">Writers:</span> ${credits.writers.map((w: string) => {
+          const artist = state.graph!.nodeData.get(w);
+          return artist ? `<span class="badge">${(artist as any).name ?? w}</span>` : `<span class="badge">${w}</span>`;
+        }).join(' ')}</div>`;
+      }
+      if (credits.producers && credits.producers.length > 0) {
+        detailsHTML += `<div style="margin:4px 0;"><span style="color:#94a3b8;">Producers:</span> ${credits.producers.map((p: string) => {
+          const artist = state.graph!.nodeData.get(p);
+          return artist ? `<span class="badge">${(artist as any).name ?? p}</span>` : `<span class="badge">${p}</span>`;
+        }).join(' ')}</div>`;
+      }
+      if (credits.performers && credits.performers.length > 0) {
+        detailsHTML += `<div style="margin:4px 0;"><span style="color:#94a3b8;">Performers:</span> ${credits.performers.map((p: string) => {
+          const artist = state.graph!.nodeData.get(p);
+          return artist ? `<span class="badge">${(artist as any).name ?? p}</span>` : `<span class="badge">${p}</span>`;
+        }).join(' ')}</div>`;
+      }
+    }
+  }
+  
+  detailsHTML += `
       <div style="margin-top:8px;">
-        <div style="color:#94a3b8;margin-bottom:4px;">Neighbors</div>
-        <div>${nbrs.map((n) => `<span class="badge">${(state.graph!.nodeData.get(n) as any)?.name ?? n}</span>`).join(' ') || '<em>None</em>'}</div>
+        <div style="color:#94a3b8;margin-bottom:4px;">${nodeType === 'song' ? 'Connected Artists' : 'Neighbors'}</div>
+        <div>${nbrs.map((n) => {
+          const nData = state.graph!.nodeData.get(n);
+          const nType = (nData as any)?.nodeType ?? 'artist';
+          const icon = nType === 'song' ? '🎵' : '👤';
+          return `<span class="badge">${icon} ${(nData as any)?.name ?? n}</span>`;
+        }).join(' ') || '<em>None</em>'}</div>
       </div>
     </div>
   `;
+  
+  el.innerHTML = detailsHTML;
 }
 
 function populateCommunities(graph: Graph): void {
@@ -262,6 +356,15 @@ function highlightPath(path: string[]): void {
 
 async function main(): Promise<void> {
   const graph = await loadGraphFromJson('data/artists.json');
+  
+  // Load song credits and add them to the graph
+  try {
+    const songCredits = await loadSongCredits('data/song-credits.json');
+    addSongCreditsToGraph(graph, songCredits);
+  } catch (error) {
+    console.warn('Failed to load song credits:', error);
+  }
+  
   render(graph);
   populateCommunities(graph);
 
@@ -281,9 +384,14 @@ async function main(): Promise<void> {
       clearHighlights();
       return;
     }
+    // Search both artists and songs
     const match = state.graph
       .nodes()
-      .find((id) => ((state.graph!.nodeData.get(id)?.name as string) ?? id).toLowerCase().includes(q));
+      .find((id) => {
+        const nodeData = state.graph!.nodeData.get(id);
+        const name = ((nodeData?.name as string) ?? id).toLowerCase();
+        return name.includes(q);
+      });
     if (match) {
       highlightSelection(match);
       showDetails(match);
