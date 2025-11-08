@@ -1,0 +1,82 @@
+{
+  "albums": [
+    {
+      "id": "album-red",
+      "title": "Red",
+      "artistIds": ["tswift"],
+      "year": 2012,
+      "songIds": ["song-everything-has-changed"]
+    },
+    {
+      "id": "album-reputation",
+      "title": "reputation",
+      "artistIds": ["tswift"],
+      "year": 2017,
+      "songIds": ["song-end-game"]
+    },
+    {
+      "id": "album-when-we-all-fall-asleep",
+      "title": "When We All Fall Asleep, Where Do We Go?",
+      "artistIds": ["billie"],
+      "year": 2019,
+      "songIds": ["song-bad-guy"]
+    },
+    {
+      "id": "album-dont-smile-at-me",
+      "title": "Don't Smile at Me",
+      "artistIds": ["billie"],
+      "year": 2017,
+      "songIds": ["song-ocean-eyes"]
+    },
+    {
+      "id": "album-anti",
+      "title": "ANTI",
+      "artistIds": ["rihanna"],
+      "year": 2016,
+      "songIds": ["song-work"]
+    },
+    {
+      "id": "album-take-care-album",
+      "title": "Take Care",
+      "artistIds": ["drake"],
+      "year": 2011,
+      "songIds": ["song-take-care"]
+    },
+    {
+      "id": "album-dangerously-in-love",
+      "title": "Dangerously in Love",
+      "artistIds": ["beyonce"],
+      "year": 2003,
+      "songIds": ["song-crazy-in-love"]
+    },
+    {
+      "id": "album-b-day",
+      "title": "B'Day",
+      "artistIds": ["beyonce"],
+      "year": 2006,
+      "songIds": ["song-deja-vu"]
+    },
+    {
+      "id": "album-black-panther",
+      "title": "Black Panther: The Album",
+      "artistIds": ["kendrick"],
+      "year": 2018,
+      "songIds": ["song-all-the-stars", "song-pray-for-me"]
+    },
+    {
+      "id": "album-damn",
+      "title": "DAMN.",
+      "artistIds": ["kendrick"],
+      "year": 2017,
+      "songIds": ["song-loyalty"]
+    },
+    {
+      "id": "album-game-of-thrones",
+      "title": "For the Throne (Music Inspired by the HBO Series Game of Thrones)",
+      "artistIds": ["weeknd", "sza"],
+      "year": 2019,
+      "songIds": ["song-power-is-power"]
+    }
+  ]
+}
+

@@ -1,7 +1,7 @@
 export type ArtistNode = {
   id: string;
   name: string;
-  nodeType?: 'artist' | 'song';
+  nodeType?: 'artist' | 'song' | 'album';
   communityId?: string;
   // Additional metadata welcome, but kept open-ended
   [key: string]: unknown;
@@ -248,6 +248,76 @@ export function addSongCreditsToGraph(graph: Graph, songCredits: SongCreditsData
   }
 
   // Reassign communities after adding songs
+  graph.assignCommunities();
+}
+
+export type Album = {
+  id: string;
+  title: string;
+  artistIds: string[];
+  year?: number;
+  songIds?: string[];
+};
+
+export type AlbumsData = {
+  albums: Album[];
+};
+
+export async function loadAlbums(url: string): Promise<AlbumsData> {
+  const res = await fetch(url);
+  return (await res.json()) as AlbumsData;
+}
+
+export function addAlbumsToGraph(graph: Graph, albumsData: AlbumsData): void {
+  // Add album nodes and create edges to artists and songs
+  for (const album of albumsData.albums) {
+    // Add album node
+    graph.addNode({
+      id: album.id,
+      name: album.title,
+      nodeType: 'album',
+      year: album.year,
+      songIds: album.songIds,
+    });
+
+    // Create edges from album to artists (who released it)
+    for (const artistId of album.artistIds) {
+      if (!graph.nodeData.has(artistId)) {
+        // Create a basic artist node if it doesn't exist
+        graph.addNode({
+          id: artistId,
+          name: artistId,
+          nodeType: 'artist',
+        });
+      }
+      graph.addEdge(album.id, artistId, 1, { 
+        relation: 'released by', 
+        albumId: album.id, 
+        artistId 
+      });
+    }
+
+    // Create edges from album to songs (tracks on the album)
+    if (album.songIds) {
+      for (const songId of album.songIds) {
+        // Song should already exist from song credits, but create if it doesn't
+        if (!graph.nodeData.has(songId)) {
+          graph.addNode({
+            id: songId,
+            name: songId,
+            nodeType: 'song',
+          });
+        }
+        graph.addEdge(album.id, songId, 1, { 
+          relation: 'contains', 
+          albumId: album.id, 
+          songId 
+        });
+      }
+    }
+  }
+
+  // Reassign communities after adding albums
   graph.assignCommunities();
 }
 

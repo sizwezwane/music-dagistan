@@ -1,10 +1,18 @@
-import { Graph, loadGraphFromJson, loadSongCredits, addSongCreditsToGraph } from './graph.js';
+import { Graph } from './graph.js';
 import * as d3 from 'd3';
+import {
+  loadGraphFromGraphQL,
+  getShortestPathFromGraphQL,
+  searchNodesFromGraphQL,
+  checkGraphQLServer,
+  type GraphQLGraph,
+  type GraphQLNode,
+} from './graphql-client.js';
 
 type NodeDatum = {
   id: string;
   name: string;
-  nodeType?: 'artist' | 'song';
+  nodeType?: 'artist' | 'song' | 'album';
   communityId: string;
   degree: number;
   centrality: number;
@@ -64,7 +72,7 @@ function render(graph: Graph): void {
     return {
       id,
       name: info.name ?? id,
-      nodeType: (info.nodeType as 'artist' | 'song' | undefined) ?? 'artist',
+      nodeType: (info.nodeType as 'artist' | 'song' | 'album' | undefined) ?? 'artist',
       communityId: info.communityId ?? 'C0',
       degree: graph.degree(id),
       centrality: centrality.get(id) ?? 0,
@@ -84,49 +92,78 @@ function render(graph: Graph): void {
       (enter) => {
         const group = enter.append('g').attr('class', 'node');
         
-        // Add shape based on node type
-        group.each(function(d) {
-          const el = d3.select(this);
-          if (d.nodeType === 'song') {
-            // Song nodes: use rectangles
-            el.append('rect')
-              .attr('class', 'song-shape')
-              .attr('width', (d) => (6 + Math.max(2, d.degree)) * 2)
-              .attr('height', (d) => (6 + Math.max(2, d.degree)) * 2)
-              .attr('x', (d) => -(6 + Math.max(2, d.degree)))
-              .attr('y', (d) => -(6 + Math.max(2, d.degree)))
-              .attr('rx', 3)
-              .attr('fill', '#fbbf24')
-              .attr('stroke', '#0b0f17')
-              .attr('stroke-width', 2);
-          } else {
-            // Artist nodes: use circles
-            el.append('circle')
-              .attr('class', 'artist-shape')
-              .attr('r', (d) => 6 + Math.max(2, d.degree))
-              .attr('fill', (d) => colorForCommunity(d.communityId))
-              .attr('stroke', '#0b0f17');
-          }
-        });
+      // Add shape based on node type
+      group.each(function(d) {
+        const el = d3.select(this);
+        if (d.nodeType === 'song') {
+          // Song nodes: use rectangles
+          el.append('rect')
+            .attr('class', 'song-shape')
+            .attr('width', (d) => (6 + Math.max(2, d.degree)) * 2)
+            .attr('height', (d) => (6 + Math.max(2, d.degree)) * 2)
+            .attr('x', (d) => -(6 + Math.max(2, d.degree)))
+            .attr('y', (d) => -(6 + Math.max(2, d.degree)))
+            .attr('rx', 3)
+            .attr('fill', '#fbbf24')
+            .attr('stroke', '#0b0f17')
+            .attr('stroke-width', 2);
+        } else if (d.nodeType === 'album') {
+          // Album nodes: use diamonds (rotated squares)
+          const size = 6 + Math.max(2, d.degree);
+          const points = [
+            [0, -size],
+            [size, 0],
+            [0, size],
+            [-size, 0]
+          ].map(p => p.join(',')).join(' ');
+          el.append('polygon')
+            .attr('class', 'album-shape')
+            .attr('points', points)
+            .attr('fill', '#8b5cf6')
+            .attr('stroke', '#0b0f17')
+            .attr('stroke-width', 2);
+        } else {
+          // Artist nodes: use circles
+          el.append('circle')
+            .attr('class', 'artist-shape')
+            .attr('r', (d) => 6 + Math.max(2, d.degree))
+            .attr('fill', (d) => colorForCommunity(d.communityId))
+            .attr('stroke', '#0b0f17');
+        }
+      });
         
-        group.append('title').text((d) => {
-          const type = d.nodeType === 'song' ? 'Song' : 'Artist';
-          return `${type}: ${d.name}\nDegree: ${d.degree}`;
-        });
+      group.append('title').text((d) => {
+        const type = d.nodeType === 'song' ? 'Song' : d.nodeType === 'album' ? 'Album' : 'Artist';
+        return `${type}: ${d.name}\nDegree: ${d.degree}`;
+      });
         return group;
       },
       (update) => {
         // Update existing nodes
         update.select('circle.artist-shape')
           .attr('r', (d) => 6 + Math.max(2, d.degree))
-          .attr('fill', (d) => d.nodeType === 'song' ? '#fbbf24' : colorForCommunity(d.communityId));
+          .attr('fill', (d) => {
+            if (d.nodeType === 'song') return '#fbbf24';
+            if (d.nodeType === 'album') return '#8b5cf6';
+            return colorForCommunity(d.communityId);
+          });
         update.select('rect.song-shape')
           .attr('width', (d) => (6 + Math.max(2, d.degree)) * 2)
           .attr('height', (d) => (6 + Math.max(2, d.degree)) * 2)
           .attr('x', (d) => -(6 + Math.max(2, d.degree)))
           .attr('y', (d) => -(6 + Math.max(2, d.degree)));
+        update.select('polygon.album-shape')
+          .attr('points', (d) => {
+            const size = 6 + Math.max(2, d.degree);
+            return [
+              [0, -size],
+              [size, 0],
+              [0, size],
+              [-size, 0]
+            ].map(p => p.join(',')).join(' ');
+          });
         update.select('title').text((d) => {
-          const type = d.nodeType === 'song' ? 'Song' : 'Artist';
+          const type = d.nodeType === 'song' ? 'Song' : d.nodeType === 'album' ? 'Album' : 'Artist';
           return `${type}: ${d.name}\nDegree: ${d.degree}`;
         });
         return update;
@@ -176,7 +213,9 @@ function render(graph: Graph): void {
     .force('collide', d3.forceCollide<NodeDatum>().radius((d) => {
       // Adjust collision radius based on node type
       const baseRadius = 6 + Math.max(2, d.degree);
-      return d.nodeType === 'song' ? baseRadius * 1.5 : baseRadius + 4;
+      if (d.nodeType === 'song') return baseRadius * 1.5;
+      if (d.nodeType === 'album') return baseRadius * 1.3;
+      return baseRadius + 4;
     }))
     .on('tick', () => {
       link
@@ -188,7 +227,9 @@ function render(graph: Graph): void {
       node.attr('transform', (d) => `translate(${d.x},${d.y})`);
       labels.attr('x', (d) => d.x!).attr('y', (d) => {
         // Adjust label position based on node type
-        const offset = d.nodeType === 'song' ? -15 : -12;
+        let offset = -12;
+        if (d.nodeType === 'song') offset = -15;
+        if (d.nodeType === 'album') offset = -18;
         return d.y! + offset;
       });
     });
@@ -255,13 +296,28 @@ function showDetails(id: string): void {
     <div>
       <div style="display:flex;align-items:center;gap:8px;">
         <strong style="font-size:16px;">${(data as any).name}</strong>
-        <span class="badge">${nodeType === 'song' ? '🎵 Song' : '👤 Artist'}</span>
+        <span class="badge">${nodeType === 'song' ? '🎵 Song' : nodeType === 'album' ? '💿 Album' : '👤 Artist'}</span>
         <span class="badge">${(data as any).communityId ?? 'C?'}</span>
       </div>
       <div class="legend" style="margin:8px 0 6px;">
         <span>Degree: <strong>${deg}</strong></span>
       </div>
   `;
+  
+  // Show album-specific information
+  if (nodeType === 'album') {
+    const year = (data as any).year;
+    const songIds = (data as any).songIds;
+    if (year) {
+      detailsHTML += `<div style="margin:4px 0;color:#94a3b8;">Year: <strong>${year}</strong></div>`;
+    }
+    if (songIds && songIds.length > 0) {
+      detailsHTML += `<div style="margin:4px 0;"><span style="color:#94a3b8;">Tracks (${songIds.length}):</span> ${songIds.map((songId: string) => {
+        const song = state.graph!.nodeData.get(songId);
+        return song ? `<span class="badge">🎵 ${(song as any).name ?? songId}</span>` : `<span class="badge">🎵 ${songId}</span>`;
+      }).join(' ')}</div>`;
+    }
+  }
   
   // Show song-specific information
   if (nodeType === 'song') {
@@ -294,11 +350,13 @@ function showDetails(id: string): void {
   
   detailsHTML += `
       <div style="margin-top:8px;">
-        <div style="color:#94a3b8;margin-bottom:4px;">${nodeType === 'song' ? 'Connected Artists' : 'Neighbors'}</div>
+        <div style="color:#94a3b8;margin-bottom:4px;">${nodeType === 'song' ? 'Connected Artists' : nodeType === 'album' ? 'Connected Artists & Songs' : 'Neighbors'}</div>
         <div>${nbrs.map((n) => {
           const nData = state.graph!.nodeData.get(n);
           const nType = (nData as any)?.nodeType ?? 'artist';
-          const icon = nType === 'song' ? '🎵' : '👤';
+          let icon = '👤';
+          if (nType === 'song') icon = '🎵';
+          else if (nType === 'album') icon = '💿';
           return `<span class="badge">${icon} ${(nData as any)?.name ?? n}</span>`;
         }).join(' ') || '<em>None</em>'}</div>
       </div>
@@ -354,19 +412,113 @@ function highlightPath(path: string[]): void {
   state.nodesSel.classed('path-highlight', (d) => path.includes(d.id));
 }
 
-async function main(): Promise<void> {
-  const graph = await loadGraphFromJson('data/artists.json');
-  
-  // Load song credits and add them to the graph
-  try {
-    const songCredits = await loadSongCredits('data/song-credits.json');
-    addSongCreditsToGraph(graph, songCredits);
-  } catch (error) {
-    console.warn('Failed to load song credits:', error);
+/**
+ * Convert GraphQL graph data to Graph instance
+ */
+function graphQLToGraph(graphData: GraphQLGraph): Graph {
+  const graph = new Graph();
+
+  // Add all nodes
+  for (const node of graphData.nodes) {
+    graph.addNode({
+      id: node.id,
+      name: node.name,
+      nodeType: node.nodeType.toLowerCase() as 'artist' | 'song' | 'album',
+      communityId: node.communityId || undefined,
+      year: node.year || undefined,
+      credits: node.credits || undefined,
+      songIds: node.songIds || undefined,
+      degree: node.degree,
+      centrality: node.centrality,
+    });
   }
+
+  // Add all edges
+  for (const edge of graphData.edges) {
+    graph.addEdge(edge.source, edge.target, 1, {
+      relation: edge.relation || 'connected',
+    });
+  }
+
+  // Communities are already assigned in GraphQL response, but we need to ensure
+  // the graph structure is correct (edges are bidirectional)
+  // The graph structure is already built above, so we just need to verify communities
+  // are properly set in nodeData (they should be from the GraphQL response)
+
+  return graph;
+}
+
+function showLoadingMessage(): void {
+  const loadingDiv = document.createElement('div');
+  loadingDiv.id = 'loading-message';
+  loadingDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #3b82f6; color: white; padding: 16px; border-radius: 8px; z-index: 10000; max-width: 400px;';
+  loadingDiv.innerHTML = `
+    <strong>Loading Graph...</strong><br/>
+    <small>Fetching data from GraphQL API</small>
+  `;
+  document.body.appendChild(loadingDiv);
+}
+
+function hideLoadingMessage(): void {
+  const loadingDiv = document.getElementById('loading-message');
+  if (loadingDiv) {
+    loadingDiv.remove();
+  }
+}
+
+function showErrorMessage(title: string, message: string): void {
+  const errorDiv = document.createElement('div');
+  errorDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #ef4444; color: white; padding: 16px; border-radius: 8px; z-index: 10000; max-width: 400px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
+  errorDiv.innerHTML = `
+    <strong>${title}</strong><br/>
+    ${message}<br/>
+    <small style="opacity: 0.9;">Check the console for more details</small>
+  `;
+  document.body.appendChild(errorDiv);
   
-  render(graph);
-  populateCommunities(graph);
+  // Auto-remove after 10 seconds
+  setTimeout(() => {
+    errorDiv.remove();
+  }, 10000);
+}
+
+async function main(): Promise<void> {
+  showLoadingMessage();
+
+  // Check if GraphQL server is available
+  const serverAvailable = await checkGraphQLServer();
+  
+  if (!serverAvailable) {
+    hideLoadingMessage();
+    console.warn('GraphQL server not available. Please make sure the server is running at http://localhost:4000');
+    showErrorMessage(
+      'GraphQL Server Not Available',
+      'Please start the GraphQL server:<br/><code style="background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 4px; margin-top: 8px; display: inline-block;">npm run server</code>'
+    );
+    return;
+  }
+
+  try {
+    // Load graph from GraphQL API
+    console.log('Loading graph from GraphQL API...');
+    const graphData = await loadGraphFromGraphQL(['ARTIST', 'SONG', 'ALBUM']);
+    console.log(`Loaded ${graphData.nodeCount} nodes and ${graphData.edgeCount} edges`);
+
+    // Convert to Graph instance
+    const graph = graphQLToGraph(graphData);
+
+    hideLoadingMessage();
+    render(graph);
+    populateCommunities(graph);
+  } catch (error) {
+    hideLoadingMessage();
+    console.error('Failed to load graph from GraphQL:', error);
+    showErrorMessage(
+      'Failed to Load Graph',
+      error instanceof Error ? error.message : 'Unknown error occurred'
+    );
+    return;
+  }
 
   const searchInput = document.getElementById('searchInput') as HTMLInputElement;
   const clearSearchBtn = document.getElementById('clearSearchBtn') as HTMLButtonElement;
@@ -377,32 +529,58 @@ async function main(): Promise<void> {
   const communitySelect = document.getElementById('communitySelect') as HTMLSelectElement;
   const reheatBtn = document.getElementById('reheatBtn') as HTMLButtonElement;
 
+  // Debounce search to avoid too many API calls
+  let searchTimeout: ReturnType<typeof setTimeout> | null = null;
   searchInput.addEventListener('input', () => {
-    if (!state.graph) return;
-    const q = searchInput.value.trim().toLowerCase();
-    if (!q) {
-      clearHighlights();
-      return;
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
     }
-    // Search both artists and songs
-    const match = state.graph
-      .nodes()
-      .find((id) => {
-        const nodeData = state.graph!.nodeData.get(id);
-        const name = ((nodeData?.name as string) ?? id).toLowerCase();
-        return name.includes(q);
-      });
-    if (match) {
-      highlightSelection(match);
-      showDetails(match);
-    }
+    
+    searchTimeout = setTimeout(async () => {
+      if (!state.graph) return;
+      const q = searchInput.value.trim();
+      if (!q) {
+        clearHighlights();
+        return;
+      }
+      
+      // Use GraphQL API for search
+      try {
+        const searchResult = await searchNodesFromGraphQL(q, ['ARTIST', 'SONG', 'ALBUM'], 10);
+        if (searchResult.nodes && searchResult.nodes.length > 0) {
+          // Use the first match
+          const match = searchResult.nodes[0].id;
+          highlightSelection(match);
+          showDetails(match);
+        } else {
+          clearHighlights();
+        }
+      } catch (error) {
+        console.error('Failed to search via GraphQL:', error);
+        // Fallback to local search
+        const qLower = q.toLowerCase();
+        const match = state.graph
+          .nodes()
+          .find((id) => {
+            const nodeData = state.graph!.nodeData.get(id);
+            const name = ((nodeData?.name as string) ?? id).toLowerCase();
+            return name.includes(qLower);
+          });
+        if (match) {
+          highlightSelection(match);
+          showDetails(match);
+        } else {
+          clearHighlights();
+        }
+      }
+    }, 300); // 300ms debounce
   });
   clearSearchBtn.addEventListener('click', () => {
     searchInput.value = '';
     clearHighlights();
   });
 
-  shortestBtn.addEventListener('click', () => {
+  shortestBtn.addEventListener('click', async () => {
     if (!state.graph) return;
     const a = findIdByName(srcInput.value.trim());
     const b = findIdByName(tgtInput.value.trim());
@@ -410,13 +588,28 @@ async function main(): Promise<void> {
       alert('Please enter valid artist names present in the graph.');
       return;
     }
-    const path = state.graph.shortestPath(a, b);
-    if (!path) {
-      alert('No path found between the selected artists.');
-      return;
+    
+    // Use GraphQL API for shortest path
+    try {
+      const pathResult = await getShortestPathFromGraphQL(a, b);
+      if (!pathResult || !pathResult.nodes || pathResult.nodes.length === 0) {
+        alert('No path found between the selected nodes.');
+        return;
+      }
+      const path = pathResult.nodes.map((n) => n.id);
+      highlightPath(path);
+      showDetails(b);
+    } catch (error) {
+      console.error('Failed to get shortest path:', error);
+      // Fallback to local graph calculation
+      const path = state.graph.shortestPath(a, b);
+      if (!path) {
+        alert('No path found between the selected nodes.');
+        return;
+      }
+      highlightPath(path);
+      showDetails(b);
     }
-    highlightPath(path);
-    showDetails(b);
   });
   clearPathBtn.addEventListener('click', () => {
     if (!state.linksSel || !state.nodesSel) return;

@@ -6,6 +6,8 @@ Explore artist relationships using graph theory. This is a static web app that v
 
 This project uses TypeScript and esbuild.
 
+### Frontend (Client)
+
 1) Install deps
 
 ```bash
@@ -39,6 +41,48 @@ For iterative dev with auto-rebuild and local web server, use:
 ```bash
 npm run dev
 ```
+
+### GraphQL API (Server)
+
+The project includes a GraphQL API service for server-side data processing. **The client now uses GraphQL by default**, so you need to start the server before running the frontend.
+
+**Start the GraphQL server:**
+
+```bash
+npm run server
+```
+
+The server will be available at `http://localhost:4000/graphql`
+
+**Development mode (with auto-reload):**
+
+```bash
+npm run server:dev
+```
+
+**Running both client and server:**
+
+1. Start the GraphQL server in one terminal:
+   ```bash
+   npm run server
+   ```
+
+2. Start the frontend in another terminal:
+   ```bash
+   npm run dev
+   ```
+
+The client will automatically connect to the GraphQL server at `http://localhost:4000/graphql`. If the server is not available, the client will display an error message.
+
+**Configuration:**
+
+You can configure the GraphQL endpoint by setting the `VITE_GRAPHQL_URL` environment variable:
+
+```bash
+VITE_GRAPHQL_URL=http://localhost:4000/graphql npm run dev
+```
+
+See `server/README.md` and `GRAPHQL_SERVICE.md` for more information.
 
 ## Files
 

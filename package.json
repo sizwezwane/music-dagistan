@@ -6,14 +6,32 @@
   "scripts": {
     "build": "esbuild src/app.ts --bundle --outfile=dist/app.js --format=esm --sourcemap",
     "dev": "esbuild src/app.ts --bundle --outfile=dist/app.js --format=esm --sourcemap --servedir=. --watch",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "server": "tsx server/src/index.ts",
+    "server:dev": "nodemon --exec tsx server/src/index.ts",
+    "server:watch": "nodemon --watch server/src --watch src --exec tsx server/src/index.ts",
+    "server:build": "tsc -p server/tsconfig.json"
   },
   "dependencies": {
-    "d3": "^7.9.0"
+    "@apollo/server": "^5.1.0",
+    "@as-integrations/express4": "^1.1.2",
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
+    "d3": "^7.9.0",
+    "express": "^4.21.2",
+    "graphql": "^16.12.0",
+    "graphql-tag": "^2.12.6"
   },
   "devDependencies": {
+    "@types/body-parser": "^1.19.6",
+    "@types/cors": "^2.8.19",
     "@types/d3": "^7.4.3",
+    "@types/express": "^5.0.5",
+    "@types/node": "^24.10.0",
     "esbuild": "^0.21.5",
+    "nodemon": "^3.1.10",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.20.6",
     "typescript": "^5.6.3"
   }
 }
