@@ -1,11 +1,49 @@
 import { Graph } from '../../src/graph.js';
 import { loadGraphFromJson, addSongCreditsToGraph, addAlbumsToGraph } from '../../src/graph.js';
-import { readFileSync } from 'fs';
-import { join, dirname } from 'path';
+import { readFileSync, existsSync } from 'fs';
+import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
+import { cwd } from 'process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+/**
+ * Get the project root directory
+ * Tries multiple methods to find the data directory
+ */
+function getProjectRoot(): string {
+  // Method 1: Try relative to this file (server/src/datasource.ts -> project root)
+  const relativePath = join(__dirname, '../../');
+  const dataPath1 = join(relativePath, 'data/artists.json');
+  
+  if (existsSync(dataPath1)) {
+    console.log(`Found data files at: ${relativePath}`);
+    return relativePath;
+  }
+  
+  // Method 2: Try from current working directory
+  const cwdPath = cwd();
+  const dataPath2 = join(cwdPath, 'data/artists.json');
+  
+  if (existsSync(dataPath2)) {
+    console.log(`Found data files at: ${cwdPath}`);
+    return cwdPath;
+  }
+  
+  // Method 3: Try from process.cwd() with resolved path
+  const resolvedPath = resolve(cwdPath);
+  const dataPath3 = join(resolvedPath, 'data/artists.json');
+  
+  if (existsSync(dataPath3)) {
+    console.log(`Found data files at: ${resolvedPath}`);
+    return resolvedPath;
+  }
+  
+  // Fallback to relative path and let it throw if file doesn't exist
+  console.warn(`Could not find data files. Trying: ${relativePath}`);
+  return relativePath;
+}
 
 /**
  * Data source that loads and manages the music graph
@@ -25,11 +63,17 @@ export class MusicGraphDataSource {
     console.log('Initializing music graph data source...');
 
     try {
-      // Get the project root directory (two levels up from server/src)
-      const projectRoot = join(__dirname, '../../');
+      // Get the project root directory
+      const projectRoot = getProjectRoot();
       
       // Load base graph from artists.json
       const artistsPath = join(projectRoot, 'data/artists.json');
+      
+      if (!existsSync(artistsPath)) {
+        throw new Error(`Artists data file not found at: ${artistsPath}`);
+      }
+      
+      console.log(`Loading artists from: ${artistsPath}`);
       const artistsData = JSON.parse(readFileSync(artistsPath, 'utf-8'));
       
       // Create graph from artists
@@ -46,9 +90,14 @@ export class MusicGraphDataSource {
       // Add song credits
       try {
         const songCreditsPath = join(projectRoot, 'data/song-credits.json');
-        const songCredits = JSON.parse(readFileSync(songCreditsPath, 'utf-8'));
-        addSongCreditsToGraph(this.graph, songCredits);
-        console.log(`Added ${songCredits.songs.length} songs`);
+        if (!existsSync(songCreditsPath)) {
+          console.warn(`Song credits file not found at: ${songCreditsPath}`);
+        } else {
+          console.log(`Loading song credits from: ${songCreditsPath}`);
+          const songCredits = JSON.parse(readFileSync(songCreditsPath, 'utf-8'));
+          addSongCreditsToGraph(this.graph, songCredits);
+          console.log(`Added ${songCredits.songs.length} songs`);
+        }
       } catch (error) {
         console.warn('Failed to load song credits:', error);
       }
@@ -56,9 +105,14 @@ export class MusicGraphDataSource {
       // Add albums
       try {
         const albumsPath = join(projectRoot, 'data/albums.json');
-        const albums = JSON.parse(readFileSync(albumsPath, 'utf-8'));
-        addAlbumsToGraph(this.graph, albums);
-        console.log(`Added ${albums.albums.length} albums`);
+        if (!existsSync(albumsPath)) {
+          console.warn(`Albums file not found at: ${albumsPath}`);
+        } else {
+          console.log(`Loading albums from: ${albumsPath}`);
+          const albums = JSON.parse(readFileSync(albumsPath, 'utf-8'));
+          addAlbumsToGraph(this.graph, albums);
+          console.log(`Added ${albums.albums.length} albums`);
+        }
       } catch (error) {
         console.warn('Failed to load albums:', error);
       }
